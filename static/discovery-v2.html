@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>それ哲ラジオを発見 | Ludicrea</title>
+    <link rel="stylesheet" href="/static/style-discovery-v2.css">
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header class="header">
+        <div class="container">
+            <h1 class="logo">それ哲ラジオ検索ツール</h1>
+            <p class="tagline">あなたの関心から、ぴったりの回を発見しよう！</p>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+
+            <!-- ステップ1: 哲学者・テーマ選択 -->
+            <section class="step" id="step-1">
+                <div class="step-header">
+                    <h2>ステップ 1</h2>
+                    <p class="step-title">関心のある哲学者またはテーマを選ぼう</p>
+                </div>
+
+                <!-- ワードクラウド表示 -->
+                <div class="wordcloud-container">
+                    <div class="wordcloud-wrapper">
+                        <div class="wordcloud" id="wordcloud">
+                            <!-- JavaScriptで動的生成 -->
+                        </div>
+                    </div>
+                    <p class="wordcloud-instruction">
+                        興味のある哲学者またはテーマをクリック
+                    </p>
+                </div>
+
+                <!-- 選択状態を表示 -->
+                <div class="selection-display" id="selection-display" style="display: none;">
+                    <p>選択中: <strong id="selected-main"></strong></p>
+                </div>
+            </section>
+
+            <!-- ステップ2: サブテーマ選択 -->
+            <section class="step" id="step-2" style="display: none;">
+                <div class="step-header">
+                    <h2>ステップ 2</h2>
+                    <p class="step-title">さらに興味の角度を選ぼう（オプション）</p>
+                    <p class="step-subtitle">
+                        「<strong id="selected-main-display"></strong>」とかけあわせて
+                        <br>どんなテーマに興味がありますか？
+                    </p>
+                </div>
+
+                <div class="subtheme-grid" id="subtheme-grid">
+                    <!-- JavaScriptで動的生成 -->
+                </div>
+
+                <!-- 選択状態を表示 -->
+                <div class="selection-display" id="subtheme-display" style="display: none;">
+                    <p>サブテーマ: <strong id="selected-sub"></strong></p>
+                </div>
+
+                <!-- アクションボタン -->
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" id="back-btn">
+                        ← 戻る
+                    </button>
+                    <button class="btn btn-primary" id="search-btn">
+                        🔍 エピソードを探す
+                    </button>
+                </div>
+
+                <!-- 注意メッセージ -->
+                <div class="notice-box">
+                    📌 環境により検索結果の表示に数十秒ほどかかる場合があります
+                </div>
+            </section>
+
+            <!-- ステップ3: 結果表示 -->
+            <section class="step" id="step-3" style="display: none;">
+                <div class="step-header">
+                    <h2>ステップ 3</h2>
+                    <p class="step-title">関連エピソード</p>
+                </div>
+
+                <div class="results-grid" id="results-grid">
+                    <!-- JavaScriptで動的生成 -->
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" id="back-to-step1-btn">
+                        ← 別の関心で探す
+                    </button>
+                </div>
+            </section>
+
+            <!-- ローディング -->
+            <div class="loading-overlay" id="loading-overlay" style="display: none;">
+                <div class="spinner"></div>
+                <p>検索中...</p>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- フッター -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>
+                <a href="https://ludicrea.jp" target="_blank" class="footer-link">
+                    ludicrea 
+                </a>
+                では、リスナー同士で交流しながら、哲学を通じて人生の豊かさを深めています。
+            </p>
+            <p class="footer-credit">© 2026 ludicrea</p>
+        </div>
+    </footer>
+
+    <script src="/static/script-discovery-v2.js"></script>
+</body>
+</html>
