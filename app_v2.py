@@ -244,9 +244,10 @@ def health():
 
 if __name__ == "__main__":
     log.info("🚀 Flask サーバー起動（Discovery UI v2）...")
-    log.info("📍 http://localhost:5000")
     
-    # 初回起動時にキャッシュを初期化
-    init_cache() 
+    port = int(os.environ.get("PORT", 5000))
+    log.info(f"📍 http://localhost:{port}")
     
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    init_cache()
+    
+    app.run(host="0.0.0.0", port=port, debug=False)
