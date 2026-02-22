@@ -1,5 +1,4 @@
 .env
-episode_embeddings.db
 __pycache__/
 *.pyc
 .DS_Store

@@ -244,10 +244,5 @@ def health():
 
 if __name__ == "__main__":
     log.info("🚀 Flask サーバー起動（Discovery UI v2）...")
-    
     port = int(os.environ.get("PORT", 5000))
-    log.info(f"📍 http://localhost:{port}")
-    
-    init_cache()
-    
     app.run(host="0.0.0.0", port=port, debug=False)
