@@ -15,6 +15,7 @@ from recommend_engine import EmbeddingCache, Episode, get_episodes
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -45,15 +46,12 @@ EPISODES = []
 def init_cache():
     global CACHE, EPISODES
     if CACHE is None:
-        log.info("🔍 キャッシュ初期化中...")
-        from recommend_engine import fetch_all_episodes
-        episodes = fetch_all_episodes()
-        
-        CACHE = EmbeddingCache()
-        CACHE.generate_and_cache_embeddings(episodes)
-        
-        EPISODES = CACHE.load_all_episodes()
-        log.info(f"✅ {len(EPISODES)} 件のエピソードをロード")
+        log.info("📦 キャッシュ読み込み中...")
+        from recommend_engine import EmbeddingCache
+        cache = EmbeddingCache()
+        EPISODES = cache.load_all_episodes()
+        CACHE = cache
+        log.info(f"✅ {len(EPISODES)} 件読み込み完了")
 
 # ─────────────────────────────────────────────────────────
 # API エンドポイント

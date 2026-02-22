@@ -86,10 +86,16 @@ async function fetchConfig() {
         // フォールバック：ハードコードされたデータを返す
         return {
             philosophers: [
-                "荘子", "ホワイトヘッド", "山内得立", "カント", "ヘーゲル",
-                "ニーチェ", "ハイデガー", "ウィトゲンシュタイン", "アリストテレス",
-                "プラトン", "キルケゴール", "フッサール", "ドゥルーズ", "レヴィナス",
-                "ナーガールジュナ", "親鸞", "道元"
+                "アウグスティヌス", "アリストテレス", "アーノルド・ミンデル", "アーレント",
+                "ウィトゲンシュタイン", "エピクロス", "カント", "キルケゴール",
+                "サルトル", "シェリング", "ショーペンハウアー", "ジョン・ロック",
+                "スピノザ", "ソクラテス", "ディオゲネス", "デカルト", "デリダ",
+                "トマス・アクィナス", "ドゥルーズ", "ナーガールジュナ", "ニーチェ",
+                "ハイデガー", "バタイユ", "ヒューム", "ピエール・アド", "フィヒテ",
+                "フッサール", "ブッダ", "プラトン", "ヘーゲル", "ホワイトヘッド",
+                "マルクス", "ライプニッツ", "レヴィナス", "レヴィ＝ストロース",
+                "一遍", "九鬼周造", "栄西", "空海", "朱熹", "法然", "王陽明",
+                "和辻哲郎", "西田幾多郎", "親鸞", "老子", "荘子", "道元"
             ],
             themes: [
                 "存在論", "認識論", "倫理学", "言語哲学", "時間・生成",
@@ -175,15 +181,18 @@ async function discover(philosophers = [], themes = [], subtheme = "") {
 // デバイスに応じてページサイズを切り替え
 function getWordcloudItemsPerPage() {
     if (window.innerWidth < 480) {
-        return 10;  // スマホ: 10個
+        return 12;  // スマホ: 10個
     } else if (window.innerWidth < 768) {
-        return 12;  // タブレット: 12個
+        return 14;  // タブレット: 12個
     } else {
-        return 14;  // デスクトップ: 12個
+        return 15;  // デスクトップ: 12個
     }
 }
 
 let WORDCLOUD_ITEMS_PER_PAGE = getWordcloudItemsPerPage();
+if (WORDCLOUD_ITEMS_PER_PAGE < 6) {
+    WORDCLOUD_ITEMS_PER_PAGE = 6;
+}
 
 let wordcloudState = {
     allItems: [],
@@ -204,14 +213,6 @@ function renderWordcloud() {
         ...appState.config.themes.map(t => ({ name: t, type: "theme", color: getThemeColor(t) })),
     ];
 
-    // 最低5個を確保 ← ここから追加
-    if (allItems.length < 5) {
-        const needed = 5 - allItems.length;
-        const duplicated = allItems.slice(0, needed);
-        allItems = [...allItems, ...duplicated];
-    }
-    // ← ここまで追加
-
     // グローバル状態に保存
     wordcloudState.allItems = allItems;
     wordcloudState.currentPageIndex = 0;
@@ -223,6 +224,11 @@ function renderWordcloud() {
     }
 
     // 最初のページを表示
+    if (window.innerWidth < 480) {
+        WORDCLOUD_ITEMS_PER_PAGE = 8;  // スマホは8個
+    } else {
+        WORDCLOUD_ITEMS_PER_PAGE = 12;  // それ以外は12個
+    }
     displayWordcloudPage();
 
     // 「他を表示」ボタンを作成（初回のみ、ワードクラウドコンテナ内に配置）
@@ -245,6 +251,11 @@ function renderWordcloud() {
                 wrapper.style.height = "";  // インラインスタイルをクリア
             }
             
+            if (window.innerWidth < 480) {
+                WORDCLOUD_ITEMS_PER_PAGE = 8;  // スマホは8個
+            } else {
+                WORDCLOUD_ITEMS_PER_PAGE = 12;  // それ以外は12個
+            }
             displayWordcloudPage();
             
             try {
@@ -293,13 +304,18 @@ function displayWordcloudPage() {
     const container = document.getElementById("wordcloud");
     if (!container) return;
 
-    // クリア
     container.innerHTML = "";
 
-    // 現在のページのアイテムを取得
-    const startIdx = wordcloudState.currentPageIndex * WORDCLOUD_ITEMS_PER_PAGE;
-    const endIdx = startIdx + WORDCLOUD_ITEMS_PER_PAGE;
-    wordcloudState.currentPageItems = wordcloudState.allItems.slice(startIdx, endIdx);
+    // ★ 修正：常に12個を確保してから表示
+    let itemsToDisplay = [];
+    
+    // allItemsから12個を取得（足りない場合はループして重複OK）
+    for (let i = 0; i < 12; i++) {
+        const idx = (wordcloudState.currentPageIndex * 12 + i) % wordcloudState.allItems.length;
+        itemsToDisplay.push(wordcloudState.allItems[idx]);
+    }
+    
+    wordcloudState.currentPageItems = itemsToDisplay;
 
     // シャッフル（毎回異なる配置にする）
     const shuffled = wordcloudState.currentPageItems.sort(() => Math.random() - 0.5);
@@ -315,79 +331,57 @@ function displayWordcloudPage() {
     // 配置：改善されたスパイラル配置（重なり回避）
     const placed = [];
     let angle = 0;
-    let radius = isMobile ? 50 : 80;  // モバイルではさらに小さい開始半径
+    let radius = isMobile ? 10 : 40;  // モバイルではさらに小さい開始半径
     
     // 配置座標の最大値を追跡（高さ調整用）
     let maxY = 0;
 
+    // 配置：グリッドベース + ランダムオフセット（柔らかい配置）
+    const cols = isMobile ? 2 : 3;
+    const rows = Math.ceil(shuffled.length / cols);
+    const cellWidth = containerWidth / cols;
+    const cellHeight = containerHeight / rows;
+    
     shuffled.forEach((item, idx) => {
         const size = getRandomSize();
         const itemWidth = getItemWidth(size);
         const itemHeight = 40;
-
-        // 重なりを避けるまでループ
-        let attempts = 0;
-        let x, y;
         
-        do {
-            const angleOffset = (Math.random() - 0.5) * (isSmallMobile ? 0.3 : 0.5);
-            const radiusOffset = (Math.random() - 0.5) * (isSmallMobile ? 40 : 60);
-            
-            const centerX = containerWidth / 2;
-            const centerY = containerHeight / 2;
-            x = centerX + Math.cos(angle + angleOffset) * (radius + radiusOffset) - itemWidth / 2;
-            y = centerY + Math.sin(angle + angleOffset) * (radius + radiusOffset) - itemHeight / 2;
+        // グリッド位置を計算
+        const row = Math.floor(idx / cols);
+        const col = idx % cols;
+        
+        // セルの中央を基準に、ランダムオフセットを加える
+        let x = col * cellWidth + (cellWidth - itemWidth) / 2;
+        let y = row * cellHeight + (cellHeight - itemHeight) / 2;
+        
+        // ランダムオフセット（柔らかさを出す）
+        x += (Math.random() - 0.5) * cellWidth * 0.6;
+        y += (Math.random() - 0.5) * cellHeight * 0.7;
+        
+        // 容器内に留める
+        x = Math.max(10, Math.min(x, containerWidth - itemWidth - 10));
+        y = Math.max(10, Math.min(y, containerHeight - itemHeight - 10));
+        
+        placed.push({ x, y, width: itemWidth, height: itemHeight });
+        maxY = Math.max(maxY, y + itemHeight);
 
-            x = Math.max(5, Math.min(x, containerWidth - itemWidth - 5));
-            y = Math.max(5, Math.min(y, containerHeight - itemHeight - 5));
+        const wordEl = document.createElement("div");
+        wordEl.className = `wordcloud-item size-${size}`;
+        wordEl.dataset.name = item.name;
+        wordEl.dataset.type = item.type;
+        wordEl.textContent = item.name;
+        wordEl.style.left = `${x}px`;
+        wordEl.style.top = `${y}px`;
+        wordEl.style.color = item.color;
+        wordEl.style.animation = `fadeInWord 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) ${Math.random() * 0.8}s both`;
 
-            attempts++;
-        } while (
-            isCollidingStrict(x, y, itemWidth, itemHeight, placed) && 
-            attempts < 20
-        );
+        wordEl.addEventListener("click", () => {
+            selectMain(item.name, item.type);
+        });
 
-        if (attempts < 20) {
-            placed.push({ x, y, width: itemWidth, height: itemHeight });
-            maxY = Math.max(maxY, y + itemHeight);  // 最大高さを記録
-
-            const wordEl = document.createElement("div");
-            wordEl.className = `wordcloud-item size-${size}`;
-            wordEl.dataset.name = item.name;
-            wordEl.dataset.type = item.type;
-            wordEl.textContent = item.name;
-            wordEl.style.left = `${x}px`;
-            wordEl.style.top = `${y}px`;
-            wordEl.style.color = item.color;
-            wordEl.style.animation = `fadeInWord 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) ${Math.random() * 0.8}s both`;
-
-            wordEl.addEventListener("click", () => {
-                selectMain(item.name, item.type);
-            });
-
-            container.appendChild(wordEl);
-        }
-
-        angle += 0.5 + Math.random() * 0.3;
-        radius += (isMobile ? 12 : 20) + Math.random() * (isMobile ? 8 : 15);
+        container.appendChild(wordEl);
     });
-
-    // 高さ調整（デバイスに応じて）
-    const wrapper = container.parentElement;
-    if (wrapper) {
-        const containerWidth = container.clientWidth;
-        const isDesktop = containerWidth >= 768;
-        const isMobile = containerWidth < 768;
-
-        if (isDesktop) {
-            // デスクトップではインラインスタイルをクリア（CSSの固定値を使用）
-            wrapper.style.height = "";
-        } else if (isMobile && maxY > 0) {
-            // モバイルで空白が目立たないよう、動的に高さを調整
-            const desiredHeight = Math.min(Math.max(maxY + 40, 350), container.clientHeight);
-            wrapper.style.height = `${desiredHeight}px`;
-        }
-    }
 
     // ページ情報をログ出力
     const totalPages = Math.ceil(wordcloudState.allItems.length / WORDCLOUD_ITEMS_PER_PAGE);
@@ -402,7 +396,7 @@ function getItemWidth(size) {
 
 function isCollidingStrict(x, y, width, height, placed) {
     // より厳しい衝突判定（パディング付き）
-    const padding = 15;
+    const padding = 80;  // 15 → 25 に増加（重なりを減らす）
     
     return placed.some(item => {
         return !(
@@ -417,11 +411,12 @@ function isCollidingStrict(x, y, width, height, placed) {
 function getRandomSize() {
     // 1～5 のサイズを確率的に割り当て
     const rand = Math.random();
-    if (rand < 0.4) return 2;
-    if (rand < 0.7) return 3;
-    if (rand < 0.85) return 1;
-    if (rand < 0.95) return 4;
-    return 5;
+    // ★ 修正：1つか2つは大きめ（size 5）にする確率を高く
+    if (rand < 0.25) return 1;  // 小さい（25%）
+    if (rand < 0.40) return 2;  
+    if (rand < 0.55) return 3;  // 中程度
+    if (rand < 0.70) return 4;  
+    return 5;  // 最大（30%）← 確率を高くして目立たせる
 }
 
 function getPhilosopherColor(name) {
@@ -697,13 +692,16 @@ function resetSelection() {
 // UI 制御
 // ─────────────────────────────────────────────────────────────
 
-function showStep(stepNumber) {
+function showStep(stepNumber, shouldScroll = true) {
     document.querySelectorAll(".step").forEach(step => {
         const stepNum = step.id.match(/\d+/)[0];
         step.style.display = stepNum == stepNumber ? "block" : "none";
     });
-
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    
+    // ゆっくりスクロール（smooth）
+    if (shouldScroll) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
 }
 
 function showLoading(show) {
