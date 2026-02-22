@@ -8,6 +8,7 @@ app_lightweight_v3.py
   2. 哲学者重視のスコアリング（マッチ強度を数値化）
   3. 選択式キーワード前提の最適化
   4. スコア内訳の返却（デバッグ・透明性向上）
+  5. ★ CSV非同期読み込み（Renderのヘルスチェック対応）
 """
 
 from flask import Flask, render_template, request, jsonify
@@ -15,6 +16,7 @@ from flask_cors import CORS
 import csv
 import os
 import logging
+import threading
 from typing import List, Dict, Tuple
 
 logging.basicConfig(level=logging.INFO)
@@ -25,6 +27,7 @@ log = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────
 
 EPISODES = []
+csv_loaded = False
 
 # 選択式キーワード（フロント側と共通）
 VALID_PHILOSOPHERS = [
@@ -119,9 +122,19 @@ def load_episodes_from_csv(csv_path: str = "soretetsudb_260223.csv") -> List[Dic
 app = Flask(__name__, template_folder="static")
 CORS(app)
 
-# ★ CSV読み込み：関数定義後に実行
-EPISODES = load_episodes_from_csv()
-log.info(f"✅ アプリ起動時に {len(EPISODES)} 件のエピソード をロード")
+# ★ バックグラウンドでCSVを読み込む関数
+def load_csv_async():
+    """バックグラウンドでCSVを読み込む"""
+    global EPISODES, csv_loaded
+    EPISODES = load_episodes_from_csv()
+    csv_loaded = True
+    log.info(f"✅ バックグラウンド読み込み完了: {len(EPISODES)} 件")
+
+# ★ アプリ起動直後にバックグラウンド処理を開始
+csv_thread = threading.Thread(target=load_csv_async, daemon=True)
+csv_thread.start()
+
+log.info("🚀 Flask サーバー起動（Discovery UI v2 - 最適化版）...")
 
 # ─────────────────────────────────────────────────────────
 # スコアリングエンジン
@@ -189,6 +202,19 @@ def calculate_match_score(
 @app.route("/")
 def index():
     return render_template("discovery-v2.html")
+
+@app.route("/api/config", methods=["GET"])
+def api_config():
+    """
+    フロント初期化用：利用可能な哲学者・テーマリストを返す
+    """
+    return jsonify({
+        "philosophers": VALID_PHILOSOPHERS,
+        "themes": VALID_THEMES,
+        "episodes_loaded": len(EPISODES),
+        "total_episodes": len(EPISODES),
+        "csv_loading": not csv_loaded  # 読み込み中フラグ
+    })
 
 @app.route("/api/discover", methods=["POST"])
 def api_discover():
@@ -326,6 +352,7 @@ def api_stats():
         "themes_count": len(theme_counts),
         "philosopher_distribution": philosopher_counts,
         "theme_distribution": theme_counts,
+        "csv_loaded": csv_loaded,
     })
 
 # ─────────────────────────────────────────────────────────
@@ -335,9 +362,5 @@ def api_stats():
 if __name__ == "__main__":
     log.info("🚀 Flask サーバー起動（Discovery UI v2 - 最適化版）...")
     log.info("📍 http://localhost:5000")
-    
-    # CSV から読み込み
-    EPISODES = load_episodes_from_csv()
-    log.info(f"✅ {len(EPISODES)} 件のエピソード をロード")
     
     app.run(host="0.0.0.0", port=5000, debug=False)
