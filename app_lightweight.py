@@ -1,14 +1,14 @@
 """
 app_lightweight_v3.py
 ────────────────────────────────────────────────────────────────────────────────
-それ哲 Discovery UI v2 - 最適化版（選択式キーワード対応）
+それ哲 Discovery UI v2 - 最適化版（遅延ロード対応）
 
 改善点:
   1. Nameフィールド確実返却（フロント表示問題の解決）
   2. 哲学者重視のスコアリング（マッチ強度を数値化）
   3. 選択式キーワード前提の最適化
   4. スコア内訳の返却（デバッグ・透明性向上）
-  5. ★ CSV非同期読み込み（Renderのヘルスチェック対応）
+  5. ★ CSV遅延ロード（初回API呼び出し時に読み込む）
 """
 
 from flask import Flask, render_template, request, jsonify
@@ -16,7 +16,6 @@ from flask_cors import CORS
 import csv
 import os
 import logging
-import threading
 from typing import List, Dict, Tuple
 
 logging.basicConfig(level=logging.INFO)
@@ -115,6 +114,16 @@ def load_episodes_from_csv(csv_path: str = "soretetsudb_260223.csv") -> List[Dic
     
     return episodes
 
+# ★ 遅延ロード関数：必要になるまでCSVを読み込まない
+def ensure_csv_loaded():
+    """CSV未読み込みならここで読み込む"""
+    global EPISODES, csv_loaded
+    if not csv_loaded:
+        log.info("📂 CSV読み込み開始...")
+        EPISODES = load_episodes_from_csv()
+        csv_loaded = True
+        log.info(f"✅ CSV読み込み完了: {len(EPISODES)} 件")
+
 # ─────────────────────────────────────────────────────────
 # Flask アプリ初期化
 # ─────────────────────────────────────────────────────────
@@ -122,19 +131,7 @@ def load_episodes_from_csv(csv_path: str = "soretetsudb_260223.csv") -> List[Dic
 app = Flask(__name__, template_folder="static")
 CORS(app)
 
-# ★ バックグラウンドでCSVを読み込む関数
-def load_csv_async():
-    """バックグラウンドでCSVを読み込む"""
-    global EPISODES, csv_loaded
-    EPISODES = load_episodes_from_csv()
-    csv_loaded = True
-    log.info(f"✅ バックグラウンド読み込み完了: {len(EPISODES)} 件")
-
-# ★ アプリ起動直後にバックグラウンド処理を開始
-csv_thread = threading.Thread(target=load_csv_async, daemon=True)
-csv_thread.start()
-
-log.info("🚀 Flask サーバー起動（Discovery UI v2 - 最適化版）...")
+log.info("🚀 Flask サーバー起動（Discovery UI v2 - 遅延ロード版）...")
 
 # ─────────────────────────────────────────────────────────
 # スコアリングエンジン
@@ -213,13 +210,13 @@ def api_config():
         "themes": VALID_THEMES,
         "episodes_loaded": len(EPISODES),
         "total_episodes": len(EPISODES),
-        "csv_loading": not csv_loaded  # 読み込み中フラグ
+        "csv_loading": not csv_loaded
     })
 
 @app.route("/api/discover", methods=["POST"])
 def api_discover():
     """
-    Discovery API（最適化版）
+    Discovery API（遅延ロード版）
     
     リクエスト:
     {
@@ -246,6 +243,9 @@ def api_discover():
     """
     
     try:
+        # ★ ここでCSVを読み込む（初回のみ実行される）
+        ensure_csv_loaded()
+        
         data = request.json or {}
         philosophers = data.get("philosophers", [])
         themes = data.get("themes", [])
@@ -337,6 +337,9 @@ def api_stats():
     """
     データベース統計情報（デバッグ用）
     """
+    # ★ stats呼び出し時もCSVを読み込む
+    ensure_csv_loaded()
+    
     philosopher_counts = {}
     theme_counts = {}
     
@@ -360,7 +363,7 @@ def api_stats():
 # ─────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    log.info("🚀 Flask サーバー起動（Discovery UI v2 - 最適化版）...")
+    log.info("🚀 Flask サーバー起動（Discovery UI v2 - 遅延ロード版）...")
     log.info("📍 http://localhost:5000")
     
     app.run(host="0.0.0.0", port=5000, debug=False)
